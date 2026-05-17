@@ -1,0 +1,3 @@
+picoCTF{d3bugg3r_p0w3r_is_4w3s0m3_676d6e5f}
+
+into: ../../root/flag.txt

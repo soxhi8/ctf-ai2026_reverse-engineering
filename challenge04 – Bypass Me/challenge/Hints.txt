@@ -1,0 +1,5 @@
+Try disassembling the binary to understand its inner workings.
+
+Pay special attention to functions available
+
+The password might be hidden or decoded at runtime

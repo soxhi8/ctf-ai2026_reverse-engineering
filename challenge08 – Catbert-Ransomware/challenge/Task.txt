@@ -1,0 +1,4 @@
+Catbert, the nefarious HR manager, has struck again. This time, he encrypted sensitive les on a disk, leaving
+us with only two clues: a rmware image and a disk image containing samples of encrypted les from the
+victim’s machine. The challenge is clear: we must delve into the rmware to uncover the mechanism that will
+unlock those encrypted les.
