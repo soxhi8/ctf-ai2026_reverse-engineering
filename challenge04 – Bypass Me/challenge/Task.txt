@@ -5,3 +5,4 @@ However, instead of guessing the password, you are expected to reverse engineer 
 You'll need to think like an attacker using tool like LLDB to uncover how the binary works under the hood and leak the correct password.
 
 You will see that you are successful, once you enter the right password. But you can also acquire the flag by running the included Docker container!
+Connect to it by running: netcat localhost 4859
