@@ -1,5 +1,5 @@
 This program can easily get into undefined states. Don't be shy about Ctrl-C.
 
-Unsanitized user input is always good, right?
+Unsanitized user input is always good, right? It looks like you will have to enter something to get to the flag.
 
 Is there any syntax that is ripe for subversion?

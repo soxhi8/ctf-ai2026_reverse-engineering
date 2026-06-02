@@ -1,0 +1,2 @@
+Spin up the Docker container, connect and answer the questions. They will guide you and maybe you will learn something new!
+Connect via: netcat localhost 4859

@@ -1,0 +1,7 @@
+Catbert, the nefarious HR manager, has struck again. This time, he encrypted sensitive files on a disk, leaving us with only two clues:
+A firmware image and a disk image containing samples of encrypted files from the victim's machine.
+The challenge is clear: we must delve into the firmware to uncover the mechanism that will unlock those encrypted files.
+
+The path to decryption is not entirely straightforward though.
+We'll need to dissect the firmware, understand some its inner workings, locate the decryption logic and hopefully, find some hidden decryption keys for the files on disk that Catbert has so cleverly concealed.
+Fear not, as we'll see in the upcoming sections, with careful analysis and a bit of determination, we'll thwart Catbert's plans and restore those files.

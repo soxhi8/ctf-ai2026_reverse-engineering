@@ -1,0 +1,6 @@
+services:
+  quizploit:
+    build: .
+    ports:
+      - "4859:4859"
+    restart: unless-stopped
