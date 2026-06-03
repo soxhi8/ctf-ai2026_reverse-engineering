@@ -4,7 +4,7 @@ RUN apk add --no-cache socat
 
 WORKDIR /app
 
-COPY challenge/quiz.py .
+COPY quiz.py .
 RUN echo "picoCTF{my_bIn@4y_3xpl0it_fL@g_58c7b379}" > flag.txt
 
 EXPOSE 4859
