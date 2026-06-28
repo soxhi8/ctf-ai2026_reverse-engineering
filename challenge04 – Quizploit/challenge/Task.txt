@@ -1,2 +1,4 @@
 Spin up the Docker container, connect and answer the questions. They will guide you and maybe you will learn something new!
-Connect via: netcat localhost 4859
+Connect via:
+- Remote: nc ctf2026.dedyn.io 4821
+- Local docker: nc localhost 4821

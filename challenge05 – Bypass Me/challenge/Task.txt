@@ -5,4 +5,6 @@ However, instead of guessing the password, you are expected to reverse engineer 
 You'll need to think like an attacker using tool like LLDB to uncover how the binary works under the hood and leak the correct password.
 
 You will see that you are successful, once you enter the right password. Run the included Docker container to enter the password!
-Connect to it using: netcat localhost 4859
+Connect to it using:
+- Remote: nc ctf2026.dedyn.io 4842
+- Local docker: nc localhost 4842
