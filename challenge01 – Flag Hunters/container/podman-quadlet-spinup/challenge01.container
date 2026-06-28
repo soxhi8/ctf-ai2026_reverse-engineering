@@ -1,0 +1,13 @@
+[Unit]
+Description=Challenge 01 - Flag Hunters
+After=network-online.target
+
+[Container]
+Image=localhost/challenge01:latest
+PublishPort=4859:4859
+ReadOnly=true
+DropCapability=all
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,13 @@
+[Unit]
+Description=Challenge 05 - Bypass Me
+After=network-online.target
+
+[Container]
+Image=localhost/challenge05:latest
+PublishPort=4842:4842
+ReadOnly=true
+DropCapability=all
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

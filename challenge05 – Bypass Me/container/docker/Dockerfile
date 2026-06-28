@@ -10,6 +10,6 @@ WORKDIR /home/ctf
 COPY bypassme.bin .
 RUN chmod +x bypassme.bin
 
-EXPOSE 4859
+EXPOSE 4842
 
-CMD ["socat", "TCP-LISTEN:4859,reuseaddr,fork", "EXEC:./bypassme.bin,pty,stderr,echo=0"]
+CMD ["socat", "TCP6-LISTEN:4842,ipv6only=0,reuseaddr,fork", "EXEC:./bypassme.bin,pty,stderr,echo=0"]

@@ -11,4 +11,4 @@ COPY lyric-reader.py .
 
 EXPOSE 4859
 
-CMD ["socat", "TCP-LISTEN:4859,reuseaddr,fork", "EXEC:python3 lyric-reader.py,pty,stderr,echo=0"]
+CMD ["socat", "TCP6-LISTEN:4859,ipv6only=0,reuseaddr,fork", "EXEC:python3 lyric-reader.py,pty,stderr,echo=0"]

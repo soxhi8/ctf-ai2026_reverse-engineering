@@ -2,5 +2,5 @@ services:
   bypassme:
     build: .
     ports:
-      - "4859:4859"
+      - "4842:4842"
     restart: unless-stopped

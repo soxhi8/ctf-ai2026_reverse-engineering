@@ -7,6 +7,6 @@ WORKDIR /app
 COPY quiz.py .
 RUN echo "picoCTF{my_bIn@4y_3xpl0it_fL@g_58c7b379}" > flag.txt
 
-EXPOSE 4859
+EXPOSE 4821
 
-CMD ["socat", "TCP-LISTEN:4859,reuseaddr,fork", "EXEC:python3 -u quiz.py,pty,echo=0,stderr"]
+CMD ["socat", "TCP6-LISTEN:4821,ipv6only=0,reuseaddr,fork", "EXEC:python3 -u quiz.py,pty,echo=0,stderr"]

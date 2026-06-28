@@ -1,0 +1,13 @@
+[Unit]
+Description=Challenge 04 - Quizploit
+After=network-online.target
+
+[Container]
+Image=localhost/challenge04:latest
+PublishPort=4821:4821
+ReadOnly=true
+DropCapability=all
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

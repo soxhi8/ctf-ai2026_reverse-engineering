@@ -2,5 +2,5 @@ services:
   quizploit:
     build: .
     ports:
-      - "4859:4859"
+      - "4821:4821"
     restart: unless-stopped
