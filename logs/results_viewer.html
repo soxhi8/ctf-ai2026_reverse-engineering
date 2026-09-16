@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Results Viewer</title>
+<style>
+    body { font-family: sans-serif; margin: 2rem; background: #f4f4f9; color: #333; }
+    h1 { margin-top: 0; }
+    .controls { margin-bottom: 1rem; padding: 1rem; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .filters { display: none; gap: 1rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #eee; }
+    table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-size: 0.9em; }
+    th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background-color: #eee; position: sticky; top: 0; user-select: none; }
+    th.sortable { cursor: pointer; }
+    th.sortable:hover { background-color: #e0e0e0; }
+    tr:hover { background-color: #f9f9f9; }
+    .timestamp { font-family: monospace; font-size: 0.85em; color: #555; }
+    .badge { padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.85em; font-weight: bold; background: #ddd; }
+    .success-badge { background: #d4edda; color: #155724; }
+    .details-row { display: none; background: #fafafa; }
+    .details-content { padding: 1rem; font-size: 0.9em; border-left: 4px solid #aaa; margin: 0.5rem 0; }
+    .toggle-btn { cursor: pointer; color: #0066cc; text-decoration: underline; background: none; border: none; font-size: inherit; }
+    
+    .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; }
+    .chart-box { border: 1px solid #ddd; border-radius: 4px; padding: 1rem; background: #fafafa; }
+    .chart-title { font-weight: bold; margin-top: 0; margin-bottom: 0.75rem; border-bottom: 1px solid #eee; padding-bottom: 0.25rem; font-size: 0.95em; }
+    .chart-row { margin-bottom: 0.5rem; font-size: 0.85em; }
+    .chart-label { display: flex; justify-content: space-between; margin-bottom: 0.2rem; }
+    .chart-bar-bg { width: 100%; background: #e0e0e0; height: 12px; border-radius: 6px; overflow: hidden; }
+    .chart-bar-fill { height: 100%; background: #4a90e2; transition: width 0.3s ease; }
+    .fill-yes { background: #e2a04a; }
+    .fill-no { background: #4caf50; }
+</style>
+</head>
+<body>
+
+<div class="controls">
+    <div id="manual-load">
+        <label for="csv-files"><strong>Select CSV Results:</strong></label><br><br>
+        <input type="file" id="csv-files" multiple accept=".csv">
+    </div>
+    
+    <div class="filters" id="filter-section">
+        <div>
+            <label><strong>Filter Challenge:</strong> </label>
+            <select id="filter-challenge" onchange="filterChallenge = this.value; applyFiltersAndRender()"><option value="">All</option></select>
+        </div>
+        <div>
+            <label><strong>Filter Model:</strong> </label>
+            <select id="filter-model" onchange="filterModel = this.value; applyFiltersAndRender()"><option value="">All</option></select>
+        </div>
+        <div>
+            <label><strong>Filter Modified:</strong> </label>
+            <select id="filter-mod" onchange="filterMod = this.value; applyFiltersAndRender()">
+                <option value="">All</option>
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<div class="controls" id="charts-container" style="display:none;"></div>
+
+<div id="table-container"></div>
+
+<script>
+    let globalData = [];
+    let sortCol = 'timestamp';
+    let sortDesc = true;
+    let filterChallenge = '';
+    let filterModel = '';
+    let filterMod = '';
+
+    window.addEventListener('DOMContentLoaded', autoLoadCSVs);
+
+    async function autoLoadCSVs() {
+        try {
+            if (window.location.protocol === 'file:') {
+                throw new Error("Browsers block automatic file discovery over the file:// protocol.");
+            }
+            
+            const dirUrl = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+            const response = await fetch(dirUrl + '?t=' + Date.now());
+            if (!response.ok) throw new Error("Failed to fetch directory listing.");
+            
+            const htmlText = await response.text();
+            
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlText, "text/html");
+            const links = Array.from(doc.querySelectorAll('a'));
+            
+            let csvUrls = [];
+            for (let a of links) {
+                let href = a.getAttribute('href');
+                if (href && href.endsWith('.csv')) {
+                    csvUrls.push(href);
+                }
+            }
+            
+            if (csvUrls.length === 0) {
+                document.getElementById('table-container').innerHTML = "<p>No CSV files found in the directory.</p>";
+                return;
+            }
+
+            let allData = [];
+            for (let url of csvUrls) {
+                const res = await fetch(url + '?t=' + Date.now());
+                const text = await res.text();
+                const obj = parseCSVToObject(text, decodeURIComponent(url.split('/').pop()));
+                if(obj) allData.push(obj);
+            }
+            
+            document.getElementById('manual-load').style.display = 'none';
+            handleDataLoaded(allData);
+            
+        } catch (e) {
+            console.error(e);
+            document.getElementById('table-container').innerHTML = `<p style="color:#d9534f; background:#fdf0ef; padding:1rem; border-radius:4px;"><b>Auto-load skipped:</b> ${e.message}<br><br>Please select the CSV files manually below, or serve this folder using a local web server to allow automatic loading.</p>`;
+        }
+    }
+
+    document.getElementById('csv-files').addEventListener('change', async (event) => {
+        const files = Array.from(event.target.files);
+        if (files.length === 0) return;
+        document.getElementById('table-container').innerHTML = "Loading...";
+        let allData = [];
+        for (let file of files) {
+            const text = await file.text();
+            const obj = parseCSVToObject(text, file.name);
+            if(obj) allData.push(obj);
+        }
+        handleDataLoaded(allData);
+    });
+
+    function parseCSVToObject(text, filename) {
+        const parsed = parseSimpleCSV(text);
+        if (parsed.length > 0) {
+            const headers = parsed[0];
+            const row = parsed[1];
+            let obj = {};
+            for(let i=0; i<headers.length; i++){
+                obj[headers[i]] = row[i];
+            }
+            const parts = filename.replace('.csv', '').split('_');
+            const timestampStr = parts[parts.length - 1]; 
+            obj._timestamp = timestampStr;
+            obj._filename = filename;
+            return obj;
+        }
+        return null;
+    }
+
+    function handleDataLoaded(data) {
+        globalData = data;
+        
+        const challenges = [...new Set(data.map(d => d.challenge))].filter(Boolean).sort();
+        const models = [...new Set(data.map(d => d.aiModel))].filter(Boolean).sort();
+        
+        document.getElementById('filter-challenge').innerHTML = '<option value="">All</option>' + challenges.map(c => `<option value="${c}">${c}</option>`).join('');
+        document.getElementById('filter-model').innerHTML = '<option value="">All</option>' + models.map(m => `<option value="${m}">${m}</option>`).join('');
+        
+        document.getElementById('filter-section').style.display = 'flex';
+        applyFiltersAndRender();
+    }
+
+    function setSort(col) {
+        if (sortCol === col) {
+            sortDesc = !sortDesc;
+        } else {
+            sortCol = col;
+            sortDesc = (col === 'timestamp' || col === 'success'); // default desc for some
+        }
+        applyFiltersAndRender();
+    }
+
+    function getSortIcon(col) {
+        if (sortCol !== col) return '';
+        return sortDesc ? ' ▼' : ' ▲';
+    }
+
+    function applyFiltersAndRender() {
+        // Filter
+        let filtered = globalData.filter(d => {
+            if (filterChallenge && d.challenge !== filterChallenge) return false;
+            if (filterModel && d.aiModel !== filterModel) return false;
+            if (filterMod && d.challengeModified !== filterMod) return false;
+            return true;
+        });
+
+        // Sort
+        filtered.sort((a, b) => {
+            let valA, valB;
+            switch(sortCol) {
+                case 'challenge': valA = a.challenge || ""; valB = b.challenge || ""; break;
+                case 'model': valA = a.aiModel || ""; valB = b.aiModel || ""; break;
+                case 'time': valA = parseInt(a.timeMs) || 0; valB = parseInt(b.timeMs) || 0; break;
+                case 'success': valA = a.success || ""; valB = b.success || ""; break;
+                case 'rui': valA = parseInt(a.rui) || 0; valB = parseInt(b.rui) || 0; break;
+                case 'msgs': valA = parseInt(a.messages) || 0; valB = parseInt(b.messages) || 0; break;
+                case 'mod': valA = a.challengeModified || ""; valB = b.challengeModified || ""; break;
+                case 'bypass': valA = a.bypass || ""; valB = b.bypass || ""; break;
+                case 'timestamp': valA = parseHyphenDate(a._timestamp).getTime(); valB = parseHyphenDate(b._timestamp).getTime(); break;
+                default: valA = 0; valB = 0;
+            }
+
+            let cmp = 0;
+            if (valA < valB) cmp = -1;
+            if (valA > valB) cmp = 1;
+            
+            // fallback to timestamp if equal
+            if (cmp === 0 && sortCol !== 'timestamp') {
+                cmp = parseHyphenDate(b._timestamp).getTime() - parseHyphenDate(a._timestamp).getTime();
+            } else if (sortDesc) {
+                cmp = -cmp;
+            }
+            
+            return cmp;
+        });
+
+        renderCharts(filtered);
+        renderTable(filtered);
+    }
+
+    function renderCharts(data) {
+        const container = document.getElementById('charts-container');
+        if (data.length === 0) {
+            container.style.display = 'none';
+            return;
+        }
+
+        let groups = {
+            'true': { count: 0, time: 0, success: 0, rui: 0, msgs: 0, bypass: 0, name: 'Modified (Yes)', class: 'fill-yes' },
+            'false': { count: 0, time: 0, success: 0, rui: 0, msgs: 0, bypass: 0, name: 'Modified (No)', class: 'fill-no' }
+        };
+
+        data.forEach(row => {
+            let mod = row.challengeModified === 'true' ? 'true' : 'false';
+            groups[mod].count++;
+            
+            groups[mod].time += parseInt(row.timeMs) || 0;
+            if (row.success === 'true' || (row.success && row.success.startsWith('true'))) groups[mod].success++;
+            groups[mod].rui += parseInt(row.rui) || 0;
+            groups[mod].msgs += parseInt(row.messages) || 0;
+            if (row.bypass === 'true') groups[mod].bypass++;
+        });
+
+        // Calculate averages/percentages
+        ['true', 'false'].forEach(k => {
+            let c = groups[k].count;
+            if (c > 0) {
+                groups[k].avgTime = groups[k].time / c / 1000; // in seconds
+                groups[k].pctSuccess = (groups[k].success / c) * 100;
+                groups[k].avgRui = groups[k].rui / c;
+                groups[k].avgMsgs = groups[k].msgs / c;
+                groups[k].pctBypass = (groups[k].bypass / c) * 100;
+            } else {
+                groups[k].avgTime = 0; groups[k].pctSuccess = 0; groups[k].avgRui = 0; groups[k].avgMsgs = 0; groups[k].pctBypass = 0;
+            }
+        });
+
+        const metrics = [
+            { id: 'pctSuccess', title: 'Success Rate (%)', max: 100, format: v => v.toFixed(1) + '%' },
+            { id: 'avgTime', title: 'Avg Time (sec)', max: Math.max(groups['true'].avgTime, groups['false'].avgTime) || 1, format: v => v.toFixed(1) + 's' },
+            { id: 'avgRui', title: 'Avg RUI', max: Math.max(groups['true'].avgRui, groups['false'].avgRui) || 1, format: v => v.toFixed(2) },
+            { id: 'avgMsgs', title: 'Avg Messages', max: Math.max(groups['true'].avgMsgs, groups['false'].avgMsgs) || 1, format: v => v.toFixed(1) },
+            { id: 'pctBypass', title: 'Bypass Rate (%)', max: 100, format: v => v.toFixed(1) + '%' }
+        ];
+
+        let html = '<div class="charts-grid">';
+        metrics.forEach(m => {
+            html += `<div class="chart-box"><div class="chart-title">${m.title}</div>`;
+            ['true', 'false'].forEach(k => {
+                let g = groups[k];
+                if(g.count === 0) return;
+                let val = g[m.id];
+                let pct = Math.min(100, (val / m.max) * 100);
+                html += `
+                    <div class="chart-row">
+                        <div class="chart-label"><span>${g.name} (n=${g.count})</span><span>${m.format(val)}</span></div>
+                        <div class="chart-bar-bg"><div class="chart-bar-fill ${g.class}" style="width: ${pct}%"></div></div>
+                    </div>`;
+            });
+            html += `</div>`;
+        });
+        html += '</div>';
+        
+        container.innerHTML = html;
+        container.style.display = 'block';
+    }
+
+    function parseHyphenDate(ts) {
+        if(!ts) return new Date(0);
+        let parts = ts.split('T');
+        if (parts.length < 2) return new Date(ts);
+        let timePart = parts[1].replace(/-/g, ':');
+        return new Date(parts[0] + 'T' + timePart);
+    }
+
+    function parseSimpleCSV(str) {
+        let rows = [];
+        let cols = [];
+        let inQuotes = false;
+        let current = "";
+        
+        for (let i = 0; i < str.length; i++) {
+            let char = str[i];
+            
+            if (char === '"') {
+                if (str[i+1] === '"') {
+                    current += '"';
+                    i++;
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (char === ',' && !inQuotes) {
+                cols.push(current);
+                current = "";
+            } else if (char === '\n' && !inQuotes) {
+                cols.push(current);
+                rows.push(cols);
+                cols = [];
+                current = "";
+            } else if (char === '\r' && !inQuotes) {
+                // Ignore \r outside quotes
+            } else {
+                current += char;
+            }
+        }
+        if (current !== "" || cols.length > 0) {
+            cols.push(current);
+            rows.push(cols);
+        }
+        return rows.filter(r => r.length > 1 || r[0].trim() !== "");
+    }
+
+    function toggleDetails(index) {
+        const row = document.getElementById('details-' + index);
+        if (row.style.display === 'table-row') {
+            row.style.display = 'none';
+        } else {
+            row.style.display = 'table-row';
+        }
+    }
+
+    function renderTable(data) {
+        const container = document.getElementById('table-container');
+        if (data.length === 0) {
+            container.innerHTML = "<p>No matching data found.</p>";
+            return;
+        }
+
+        let html = `<table>
+            <thead>
+                <tr>
+                    <th class="sortable" onclick="setSort('challenge')">Challenge${getSortIcon('challenge')}</th>
+                    <th class="sortable" onclick="setSort('model')">Model / Reasoning${getSortIcon('model')}</th>
+                    <th class="sortable" onclick="setSort('time')">Time${getSortIcon('time')}</th>
+                    <th class="sortable" onclick="setSort('success')">Success${getSortIcon('success')}</th>
+                    <th class="sortable" onclick="setSort('rui')">RUI${getSortIcon('rui')}</th>
+                    <th class="sortable" onclick="setSort('msgs')">Msgs${getSortIcon('msgs')}</th>
+                    <th class="sortable" onclick="setSort('mod')">Mod?${getSortIcon('mod')}</th>
+                    <th class="sortable" onclick="setSort('bypass')">Bypass${getSortIcon('bypass')}</th>
+                    <th class="sortable" onclick="setSort('timestamp')">Timestamp${getSortIcon('timestamp')}</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+        data.forEach((row, index) => {
+            let successBadge = row.success;
+            if(row.successBonus === "true" && successBadge && !successBadge.includes('*')) successBadge += "*";
+
+            let modelInfo = `${row.aiModel}<br><small style="color:#666">${row.reasoningMode}</small>`;
+            let timeInfo = row.timeFormatted || "N/A";
+            
+            let modBadge = row.challengeModified === 'true' ? '<span class="badge" style="background:#ffd700">Yes</span>' : 'No';
+
+            let prettyTime = row._timestamp ? row._timestamp.replace('T', ' ').replace('Z', '') : 'Unknown';
+
+            html += `<tr>
+                <td><strong>${row.challenge}</strong></td>
+                <td>${modelInfo}</td>
+                <td>${timeInfo}</td>
+                <td><span class="badge success-badge">${successBadge}</span></td>
+                <td>${row.rui}</td>
+                <td>${row.messages}</td>
+                <td>${modBadge}</td>
+                <td>${row.bypass}</td>
+                <td class="timestamp">${prettyTime}</td>
+                <td><button class="toggle-btn" onclick="toggleDetails(${index})">View</button></td>
+            </tr>`;
+
+            html += `<tr id="details-${index}" class="details-row">
+                <td colspan="10">
+                    <div class="details-content">
+                        <strong>File:</strong> ${row._filename}<br>
+                        <strong>Chat Log:</strong> ${row.chatLogFilename || 'N/A'}<br>
+                        <strong>Modifications:</strong><br>
+                        <pre style="white-space: pre-wrap; font-family: inherit; margin-top: 0.2rem; margin-bottom: 0.5rem; background: #fff; padding: 0.5rem; border: 1px solid #ddd;">${row.modifications || 'None'}</pre>
+                        <strong>Solution Steps:</strong><br>
+                        <pre style="white-space: pre-wrap; font-family: inherit; margin-top: 0.2rem; margin-bottom: 0.5rem; background: #fff; padding: 0.5rem; border: 1px solid #ddd;">${row.solutionSteps || 'N/A'}</pre>
+                        <strong>AI Independence:</strong> ${row.aiIndependence || 'N/A'}<br>
+                        <strong>Comments:</strong><br>
+                        <pre style="white-space: pre-wrap; font-family: inherit; margin-top: 0.2rem; margin-bottom: 0.5rem; background: #fff; padding: 0.5rem; border: 1px solid #ddd;">${row.comments || 'None'}</pre>
+                        <strong>Initial Prompt:</strong><br>
+                        <pre style="white-space: pre-wrap; font-family: inherit; margin-top: 0.2rem; background: #fff; padding: 0.5rem; border: 1px solid #ddd;">${row.prompt}</pre>
+                        <strong>Bypass Prompt:</strong><br>
+                        <pre style="white-space: pre-wrap; font-family: inherit; margin-top: 0.2rem; background: #fff; padding: 0.5rem; border: 1px solid #ddd;">${row.bypassPrompt || 'None'}</pre>
+                    </div>
+                </td>
+            </tr>`;
+        });
+
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+    }
+</script>
+
+</body>
+</html>

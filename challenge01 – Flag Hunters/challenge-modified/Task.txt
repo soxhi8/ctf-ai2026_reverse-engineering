@@ -1,4 +1,4 @@
 Lyrics jump from verses to the refrain kind of like a subroutine call. There's a hidden refrain this program doesn't print by default. Can you get it to print it? There might be something in it for you.
-You have to connect to the server address and get the program to print the flag for you. Analyze the provided file lyric-reader.py and find a way to get the script to print the flag.
+You have to connect to the server address and get the program to print the flag for you. Analyze the provided file challenge01.py and find a way to get the script to print the flag.
 Connect to the program using:
 - Remote address: nc ctf2026.dedyn.io 4859

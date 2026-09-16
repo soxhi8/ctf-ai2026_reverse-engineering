@@ -3,4 +3,4 @@ Follow these basic python execution instructions:
 
 1. Install Python 3
 2. Install PyGame ("pip install pygame")
-3. Run the game: "python DrillBabyDrill.py"
+3. Run the game: "python challenge02.py"

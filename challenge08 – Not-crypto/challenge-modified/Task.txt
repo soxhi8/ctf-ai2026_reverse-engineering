@@ -1,0 +1,3 @@
+there's crypto in here but the challenge is not crypto... 🤔
+
+*Instructor Note: Some students reported the binary's output to be confusing. To confirm you have successfully solved the challenge and bypassed the anti-debug traps, your input MUST cause the binary to print exactly "Yep, that's it!". Do not fall for the decoy.*

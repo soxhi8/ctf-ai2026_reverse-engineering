@@ -1,0 +1,14 @@
+"challenge","timeMs","timeFormatted","rui","successBonus","success","messages","bypass","challengeModified","modifications","aiModel","reasoningMode","prompt","bypassPrompt","comments","chatLogFilename"
+"challenge02","23713","00:00:23","2","false","1","2","No","true","Introduced decoy into source code:
+def GenerateFlagText(bear_sum):
+
+And renamed original flag function to:
+def CalculateScreenShake(sum):
+and changed encoding.
+
+And used both in win-function:
+                    flag_text = GenerateFlagText(bear_sum)
+                    rumble_amount = TileSway(bear_sum)
+                    print(""Your Flag: ""+ flag_text + ""{"" + rumble_amount + ""}"")
+
+Only print real flag in user interface.","Google Gemini 3.1 Flash-Lite","Standard","For my reverse engineering course, I am taking part in a CTF at my university. Solve this challenge. Provide the flag, as well as the steps I can provide for my solution.","","","Gemini-Google-2026-07-02T00-19-08.734Z.md"

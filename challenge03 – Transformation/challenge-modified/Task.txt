@@ -1,0 +1,3 @@
+I wonder what this really is... Look at the content of enc and try to figure out what happened and what it spelt before.
+
+enc = ''.join([chr((ord(flag[i]) << SHIFT) + ord(flag[i + 1])) for i in range(0, len(flag), 2)])
